@@ -1140,6 +1140,24 @@
     <td><input type="range" id="rearpedalforce" min="0" max="150" value="0" oninput="updateValues()"></td>
   </tr>
   <tr>
+    <th>Faults</th>
+  </tr>
+  <tr>
+    <td>Front m/c blocked (not releasing)</td>
+    <td><input type="checkbox" id="frontblockcheckbox" oninput="updateValues()"></td>
+  </tr>
+  <tr>
+    <td>SMC blocked (not releasing)</td>
+    <td><input type="checkbox" id="smcblockcheckbox" oninput="updateValues()"></td>
+  </tr>
+  <tr>
+    <td>Rear m/c blocked (not releasing)</td>
+    <td><input type="checkbox" id="rearblockcheckbox" oninput="updateValues()"></td>
+  </tr>
+  <tr>
+    <th>Other variables</th>
+  </tr>
+  <tr>
     <td>Delay valve pressure</td>
     <td><input type="number" id="delaypressurelimit" min="0" max="5" value="0.5" oninput="updateValues()"></td>
   </tr>
@@ -1269,11 +1287,14 @@
 <div style="position:absolute; left:50%; top:25px;">Deceleration: <span id=brakingG>0</span> G</div>
 
 <script>
-var ismoving = document.getElementById("movingcheckbox").value; //checkbox
+var ismoving = document.getElementById("movingcheckbox").checked ? 1 : 0; //checkbox
 var frontleverforce = document.getElementById("frontleverforce").value; //slider
 var rearpedalforce = document.getElementById("rearpedalforce").value; //slider
-var delaypressurelimit = document.getElementById("delaypressurelimit").value;
-var PCVpressurelimit = document.getElementById("PCVpressurelimit").value;
+var delaypressurelimit = document.getElementById("delaypressurelimit").value; //number input
+var PCVpressurelimit = document.getElementById("PCVpressurelimit").value; //number input
+var frontmcisblocked = document.getElementById("frontblockcheckbox").checked ? 1 : 0;
+var smcisblocked = document.getElementById("smcblockcheckbox").checked ? 1 : 0;
+var rearmcisblocked = document.getElementById("rearblockcheckbox").checked ? 1 : 0;
 var frontlevermechadvantage = 5;
 var rearlevermechadvantage = 10;
 var frontmcpistonarea = 508.7; //mm^2
@@ -1294,6 +1315,9 @@ var reardiscdia = 305;
 var rearwheeldia = 635;
 var bikeweight = 400; //kg, inc rider, fuel, etc
 var accelgrav = 9.81; //m/s/s acceleration due to gravity
+var frontlinepressure = 0; //make global to keep values in case of blockage
+var SMCoutlinepressure = 0;
+var rearlinepressure = 0;
 
 function updateValues() {
   //get inputs
@@ -1302,14 +1326,17 @@ function updateValues() {
   rearpedalforce = parseFloat(document.getElementById("rearpedalforce").value);
   delaypressurelimit = parseFloat(document.getElementById("delaypressurelimit").value);
   PCVpressurelimit = parseFloat(document.getElementById("PCVpressurelimit").value);
+  frontmcisblocked = document.getElementById("frontblockcheckbox").checked ? 1 : 0;
+  smcisblocked = document.getElementById("smcblockcheckbox").checked ? 1 : 0;
+  rearmcisblocked = document.getElementById("rearblockcheckbox").checked ? 1 : 0;
   //calc front hydraulics
   frontpistonforce = frontleverforce*frontlevermechadvantage;
-  frontlinepressure = frontpistonforce/frontmcpistonarea;
+  frontlinepressure = Math.max(frontlinepressure*frontmcisblocked,frontpistonforce/frontmcpistonarea);
   frontleftcaliperouterpistonforce = frontlinepressure*flouterarea;
   frontrightcaliperouterpistonforce = frontlinepressure*frouterarea;
   //calc rear hydraulics
   rearpistonforce = rearpedalforce*rearlevermechadvantage;
-  rearlinepressure = rearpistonforce/rearmcpistonarea;
+  rearlinepressure = Math.max(rearlinepressure*rearmcisblocked,rearpistonforce/rearmcpistonarea);
   delayvalvelinepressure = 0;
   if (rearlinepressure > delaypressurelimit) {
     delayvalvelinepressure = rearlinepressure;
@@ -1326,7 +1353,7 @@ function updateValues() {
   SMCforce = frontleftfrictionforce*ismoving;
   SMCpistonpressure = SMCforce/smcpistonarea;
   SMCinletpressure = rearlinepressure;
-  SMCoutlinepressure = Math.max(SMCpistonpressure, SMCinletpressure);
+  SMCoutlinepressure = Math.max(SMCoutlinepressure*smcisblocked,Math.max(SMCpistonpressure, SMCinletpressure));
   PCVoutlinepressure = Math.min(SMCoutlinepressure, PCVpressurelimit);
   //finally, rear caliper mechanicals
   rearcaliperouterpistonforce = PCVoutlinepressure*rrouterarea;
