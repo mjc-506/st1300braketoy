@@ -1155,6 +1155,18 @@
     <td><input type="checkbox" id="rearblockcheckbox" oninput="updateValues()"></td>
   </tr>
   <tr>
+    <td>Front left caliper seized (not releasing)</td>
+    <td><input type="checkbox" id="frontleftseizecheckbox" oninput="updateValues()"></td>
+  </tr>
+  <tr>
+    <td>Front right caliper seized (not releasing)</td>
+    <td><input type="checkbox" id="frontrightseizecheckbox" oninput="updateValues()"></td>
+  </tr>
+  <tr>
+    <td>Rear caliper seized (not releasing)</td>
+    <td><input type="checkbox" id="rearseizecheckbox" oninput="updateValues()"></td>
+  </tr>
+  <tr>
     <th>Other variables</th>
   </tr>
   <tr>
@@ -1295,6 +1307,9 @@ var PCVpressurelimit = document.getElementById("PCVpressurelimit").value; //numb
 var frontmcisblocked = document.getElementById("frontblockcheckbox").checked ? 1 : 0;
 var smcisblocked = document.getElementById("smcblockcheckbox").checked ? 1 : 0;
 var rearmcisblocked = document.getElementById("rearblockcheckbox").checked ? 1 : 0;
+var frontleftcaliperisseized = document.getElementById("frontleftseizecheckbox").checked ? 1 : 0;
+var frontrightcaliperisseized = document.getElementById("frontrightseizecheckbox").checked ? 1 : 0;
+var rearcaliperisseized = document.getElementById("rearseizecheckbox").checked ? 1 : 0;
 var frontlevermechadvantage = 5;
 var rearlevermechadvantage = 10;
 var frontmcpistonarea = 508.7; //mm^2
@@ -1318,6 +1333,9 @@ var accelgrav = 9.81; //m/s/s acceleration due to gravity
 var frontlinepressure = 0; //make global to keep values in case of blockage
 var SMCoutlinepressure = 0;
 var rearlinepressure = 0;
+var frontleftpadforce = 0;
+var frontrightpadforce = 0;
+var rearpadforce = 0;
 
 function updateValues() {
   //get inputs
@@ -1329,6 +1347,9 @@ function updateValues() {
   frontmcisblocked = document.getElementById("frontblockcheckbox").checked ? 1 : 0;
   smcisblocked = document.getElementById("smcblockcheckbox").checked ? 1 : 0;
   rearmcisblocked = document.getElementById("rearblockcheckbox").checked ? 1 : 0;
+  frontleftcaliperisseized = document.getElementById("frontleftseizecheckbox").checked ? 1 : 0;
+  frontrightcaliperisseized = document.getElementById("frontrightseizecheckbox").checked ? 1 : 0;
+  rearcaliperisseized = document.getElementById("rearseizecheckbox").checked ? 1 : 0;
   //calc front hydraulics
   frontpistonforce = frontleverforce*frontlevermechadvantage;
   frontlinepressure = Math.max(frontlinepressure*frontmcisblocked,frontpistonforce/frontmcpistonarea);
@@ -1345,8 +1366,8 @@ function updateValues() {
   frontleftcalipermiddlepistonforce = rearlinepressure*flinnerarea;
   frontrightcalipermiddlepistonforce = delayvalvelinepressure*frinnerarea;
   //now calc front pad forces (need this for SMC inputs)
-  frontleftpadforce = 2*frontleftcaliperouterpistonforce + frontleftcalipermiddlepistonforce;
-  frontrightpadforce = 2*frontrightcaliperouterpistonforce + frontrightcalipermiddlepistonforce;
+  frontleftpadforce = Math.max(frontleftpadforce*frontleftcaliperisseized,2*frontleftcaliperouterpistonforce + frontleftcalipermiddlepistonforce);
+  frontrightpadforce = Math.max(frontrightpadforce*frontrightcaliperisseized,2*frontrightcaliperouterpistonforce + frontrightcalipermiddlepistonforce);
   frontleftfrictionforce = frontleftpadforce*brakepadfriction;
   fronttotalfrictionforce = (frontleftpadforce + frontrightpadforce)*brakepadfriction;
   //now SMC hydraulics
@@ -1357,7 +1378,7 @@ function updateValues() {
   PCVoutlinepressure = Math.min(SMCoutlinepressure, PCVpressurelimit);
   //finally, rear caliper mechanicals
   rearcaliperouterpistonforce = PCVoutlinepressure*rrouterarea;
-  rearpadforce = 2*rearcaliperouterpistonforce + rearcalipermiddlepistonforce;
+  rearpadforce = Math.max(rearpadforce*rearcaliperisseized,2*rearcaliperouterpistonforce + rearcalipermiddlepistonforce);
   reartotalfrictionforce = rearpadforce*brakepadfriction;
   
   //set HTML text
